@@ -3,8 +3,8 @@ import pandas as pd
 import plotly.graph_objects as go
 
 
-liq_spread_table = pd.read_csv('pricing_parameters/LS.csv')
-fix_params = pd.read_csv('pricing_parameters/params.csv')
+liq_spread_table = pd.read_csv('LS.csv')
+fix_params = pd.read_csv('params.csv')
 
 
 def real_balance_calc(tasa_interes_anual, num_pagos, monto_prestamo, cancelacion=0):
