@@ -216,7 +216,7 @@ app.layout = html.Div([
             html.Td(dcc.Input(id='input-valor-1', type='number')),
         ]),
         html.Tr([
-            html.Td('TIN:'),
+            html.Td('TIN (sobre 1):'),
             html.Td(dcc.Input(id='input-valor-2', type='number')),
         ]),
         html.Tr([
@@ -259,16 +259,16 @@ app.layout = html.Div([
             html.H2("Beneficio de la operación", style={'color':'rgb(0,26,72)'}),
             dash_table.DataTable(id='tabla-3', style_data_conditional=[
                 {
-                    'if': {'column_id': 'RORWA', 'filter_query': '{RORWA} >= 2'},
+                    'if': {'column_id': 'RORWA', 'filter_query': '{RORWA} >= 0.02'},
                     'backgroundColor': 'green',
                     'color': 'white',
                 },
                 {
-                    'if': {'column_id': 'RORWA', 'filter_query': '{RORWA} < 2 && {RORWA} >= 1'},
+                    'if': {'column_id': 'RORWA', 'filter_query': '{RORWA} < 0.02 && {RORWA} >= 0.01'},
                     'backgroundColor': 'orange',
                 },
                 {
-                    'if': {'column_id': 'RORWA', 'filter_query': '{RORWA} < 1'},
+                    'if': {'column_id': 'RORWA', 'filter_query': '{RORWA} < 0.01'},
                     'backgroundColor': 'red',
                     'color': 'white',
                 },], style_header={'backgroundColor': 'rgb(0,26,72)', 'fontWeight': 'bold', 'color': 'white'})])]
@@ -289,16 +289,16 @@ dmc.Container([
             html.H2("Cuadro de rentabilidad (P&L)", style={'color':'rgb(0,26,72)'}),
             dash_table.DataTable(id='tabla-4', style_data_conditional=[
                 {
-                    'if': {'column_id': 'RORWA', 'filter_query': '{RORWA} >= 2'},
+                    'if': {'column_id': 'RORWA', 'filter_query': '{RORWA} >= 0.02'},
                     'backgroundColor': 'green',
                     'color': 'white',
                 },
                 {
-                    'if': {'column_id': 'RORWA', 'filter_query': '{RORWA} < 2 && {RORWA} >= 1'},
+                    'if': {'column_id': 'RORWA', 'filter_query': '{RORWA} < 0.02 && {RORWA} >= 0.01'},
                     'backgroundColor': 'orange',
                 },
                 {
-                    'if': {'column_id': 'RORWA', 'filter_query': '{RORWA} < 1'},
+                    'if': {'column_id': 'RORWA', 'filter_query': '{RORWA} < 0.01'},
                     'backgroundColor': 'red',
                     'color': 'white',
                 },]+[
@@ -434,7 +434,7 @@ def table(valor1, valor2, valor3, valor5, valor6, valor7, valor8):
     # Crea un DataFrame con los valores ingresados
     valor4 = fix_params[fix_params.contrato == valor8].Cancelacion.values[0]
     tab, tot = frenchAmortizationCalculator(valor1, valor2, valor3, fix_params[fix_params.contrato == valor8].Cancelacion.values[0])
-    ind = getIndicators(valor1, valor2, valor3, valor4, valor5, valor6, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0])
+    ind = getIndicators(valor1, valor2, valor3, valor4, valor5, valor6, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1)
     
     #fix_inputs = pd.DataFrame({'Inputs':['Contrato', 'ITR', 'Non Financial Fees', 'Gastos operativos', 'Pérdida esperada', 'RWA', 'RORWA objetivo'], 'Valores':fix_params[fix_params.contrato == valor8].values[0]})
     
@@ -449,19 +449,19 @@ def table(valor1, valor2, valor3, valor5, valor6, valor7, valor8):
     EL = (fix_params[fix_params.contrato == valor8].EL.values[0]*-1)
     PBT = NOI + EL
     PAT = 0.715*PBT
-    RWA = fix_params[fix_params.contrato == valor8].RWA.values[0]
+    RWA = fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1
     RORWA = (PAT*valor1 / RWA)
 
 
     p_and_l = np.round(pd.DataFrame({'Inputs':['TIN', 'Financial fees', 'Total Interest Income', 'Total Interest Expenses', 'Net Interest Income', 'Non Fiancial Fees', 'Gross Margin', 'Operating Expenses ', 'Net Operating Income', 'EL', 'PBT', 'PAT', 'RWA', 'RORWA'], 'Valores':[valor2, fin_fees, TII, TIE, NII, non_fin_fees, GM, op_exp, NOI, EL, PBT, PAT, RWA, RORWA]}), 2)
     p_and_l['Valores'] = [f"{np.round(valor*100, 2)}%" if i != p_and_l.shape[0]-2 else valor for i, valor in enumerate(p_and_l['Valores'])]
 
-    by_monto = [getIndicators(i, valor2, valor3, valor4, valor5, valor6, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]).RORWA.values[0] for i in np.arange(100, 50000, 10000)]
-    by_TIN = [getIndicators(valor1, i, valor3, valor4, valor5, valor6, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]).RORWA.values[0] for i in np.arange(-1.1, 1.1, 0.01)]
-    by_pagos = [getIndicators(valor1, valor2, i, valor4, valor5, valor6, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]).RORWA.values[0] for i in range(valor4+1, 70)]
-    by_fapertura = [getIndicators(valor1, valor2, valor3, valor4, valor5, valor6, i, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]).RORWA.values[0] for i in np.arange(0, 20000, 2000)]
-    by_fterceros = [getIndicators(valor1, valor2, valor3, valor4, i, valor6, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]).RORWA.values[0] for i in np.arange(0, 20000, 2000)]
-    by_frappels = [getIndicators(valor1, valor2, valor3, valor4, valor5, i, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]).RORWA.values[0] for i in np.arange(0, 20000, 2000)]
+    by_monto = [getIndicators(i, valor2, valor3, valor4, valor5, valor6, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1).RORWA.values[0] for i in np.arange(100, 50000, 10000)]
+    by_TIN = [getIndicators(valor1, i, valor3, valor4, valor5, valor6, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1).RORWA.values[0] for i in np.arange(-1.1, 1.1, 0.01)]
+    by_pagos = [getIndicators(valor1, valor2, i, valor4, valor5, valor6, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1).RORWA.values[0] for i in range(valor4+1, 70)]
+    by_fapertura = [getIndicators(valor1, valor2, valor3, valor4, valor5, valor6, i, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1).RORWA.values[0] for i in np.arange(0, 20000, 2000)]
+    by_fterceros = [getIndicators(valor1, valor2, valor3, valor4, i, valor6, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1).RORWA.values[0] for i in np.arange(0, 20000, 2000)]
+    by_frappels = [getIndicators(valor1, valor2, valor3, valor4, valor5, i, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1).RORWA.values[0] for i in np.arange(0, 20000, 2000)]
 
     
     TIN_df = pd.DataFrame({'TIN':np.arange(-1.1, 1.1, 0.01), 'RORWA':by_TIN})
@@ -486,4 +486,4 @@ def table(valor1, valor2, valor3, valor5, valor6, valor7, valor8):
     return tot.to_dict('records'), tab.to_dict('records'), ind.to_dict('records'), fig1, fig2, fig3, p_and_l.to_dict('records'), fig4, fig5, fig6, params.to_dict('records')
 
 if __name__ == "__main__":
-    app.run_server(debug=True, port=8050)
+    app.run_server(debug=False, port=8050)
