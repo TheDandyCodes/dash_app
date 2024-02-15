@@ -3,8 +3,8 @@ import pandas as pd
 import plotly.graph_objects as go
 
 
-liq_spread_table = pd.read_csv('LS.csv')
-fix_params = pd.read_csv('params.csv')
+liq_spread_table = pd.read_csv('pricing_parameters/LS.csv')
+fix_params = pd.read_csv('pricing_parameters/params.csv')
 
 
 def real_balance_calc(tasa_interes_anual, num_pagos, monto_prestamo, cancelacion=0):
@@ -96,7 +96,7 @@ def frenchAmortizationCalculator(monto_prestamo, tasa_interes_anual=0, num_pagos
     # real_balance = np.mean(li)
 
     real_balance = real_balance_calc(tasa_interes_anual, num_pagos, monto_prestamo, cancelacion)
-    total = pd.DataFrame({'Interes':sum(cuadro['Interes']), 'Principal':sum(cuadro['Principal'])+(cuadro['Saldo inicial'][-1:] - cuadro.Principal[-1:]).values[0], 'Total cuotas':(sum(cuadro['Interes'])+sum(cuadro['Principal'])+(cuadro['Saldo inicial'][-1:] - cuadro.Principal[-1:]).values[0]), 'Real Balance':real_balance, 'Duration':duration, 'Real term':num_pagos-cancelacion}, index=['Total'])
+    total = pd.DataFrame({'Interes':sum(cuadro['Interes']), 'Principal':sum(cuadro['Principal'])+(cuadro['Saldo inicial'][-1:] - cuadro.Principal[-1:]).values[0], 'Total cuotas':(sum(cuadro['Interes'])+sum(cuadro['Principal'])+(cuadro['Saldo inicial'][-1:] - cuadro.Principal[-1:]).values[0]), 'Saldo medio':real_balance, 'Duración':duration, 'Plazo real':num_pagos-cancelacion}, index=['Total'])
     
 
     return np.round(cuadro,2), np.round(total,4)
@@ -199,7 +199,8 @@ opciones_dropdown = [
 
 # Define el diseño del dashboard con 4 campos de entrada
 app.layout = html.Div([
-    html.H1("Calculadora", style={'color':'rgb(0,26,72)'}),
+    html.H1("Calculadora Comercial", style={'color':'rgb(0,26,72)'}),
+    html.H4("Introduzca el tipo de producto que se desea financiar", style={'color':'rgb(0,26,72)'}),
         dcc.Dropdown(
         id='contrato-input',
         value='consumo',
@@ -209,7 +210,7 @@ app.layout = html.Div([
     ),
     
     html.H2("Tabla de inputs", style={'color':'rgb(0,26,72)'}),
-
+    html.H4("Introduzca las características del préstamo", style={'color':'rgb(0,26,72)'}),
     html.Table([
         html.Tr([
             html.Td('Inversión:'),
@@ -228,11 +229,11 @@ app.layout = html.Div([
         #     html.Td(dcc.Input(id='input-valor-4', type='number')),
         # ]),
         html.Tr([
-            html.Td('Comisiones pagadas de terceros:'),
+            html.Td('Comisiones pagadas a terceros:'),
             html.Td(dcc.Input(id='input-valor-5', type='number')),
         ]),
         html.Tr([
-            html.Td('Comisiones pagadas de rappels:'),
+            html.Td('Comisiones pagadas rappels:'),
             html.Td(dcc.Input(id='input-valor-6', type='number')),
         ]),
         html.Tr([
@@ -242,6 +243,7 @@ app.layout = html.Div([
     ], style={'margin': '20px'}),
     
     html.H2("Parámetros por producto", style={'color':'rgb(0,26,72)'}),
+    html.H4("Son fijos desagregando por lo que se quiera. (Esto no se vería)", style={'color':'rgb(0,26,72)'}),
     html.Div(dash_table.DataTable(id='tabla-params', style_header={'backgroundColor': 'rgb(0,26,72)', 'fontWeight': 'bold', 'color': 'white'}), style={'margin-bottom': '20px'},),
     
     dmc.Container([
@@ -432,21 +434,21 @@ dmc.Container([
 )
 def table(valor1, valor2, valor3, valor5, valor6, valor7, valor8):
     # Crea un DataFrame con los valores ingresados
-    valor4 = fix_params[fix_params.contrato == valor8].Cancelacion.values[0]
-    tab, tot = frenchAmortizationCalculator(valor1, valor2, valor3, fix_params[fix_params.contrato == valor8].Cancelacion.values[0])
-    ind = getIndicators(valor1, valor2, valor3, valor4, valor5, valor6, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1)
+    valor4 = fix_params[fix_params.contrato == valor8]['plazo cancelado'].values[0]
+    tab, tot = frenchAmortizationCalculator(valor1, valor2, valor3, fix_params[fix_params.contrato == valor8]['plazo cancelado'].values[0])
+    ind = getIndicators(valor1, valor2, valor3, valor4, valor5, valor6, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8]['Comisiones no financieras'].values[0], fix_params[fix_params.contrato == valor8]['Gastos de explotacion'].values[0], fix_params[fix_params.contrato == valor8]['Perdida esperada'].values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1)
     
     #fix_inputs = pd.DataFrame({'Inputs':['Contrato', 'ITR', 'Non Financial Fees', 'Gastos operativos', 'Pérdida esperada', 'RWA', 'RORWA objetivo'], 'Valores':fix_params[fix_params.contrato == valor8].values[0]})
     
-    fin_fees = ((valor7-valor6-valor5)*12*(tot['Real Balance'].values[0]*(valor3-valor4))**-1)
+    fin_fees = ((valor7-valor6-valor5)*12*(tot['Saldo medio'].values[0]*(valor3-valor4))**-1)
     TII = valor2 + fin_fees
     TIE = -((ind.LS.values[0] + fix_params[fix_params.contrato == valor8].ITR.values[0]))
-    non_fin_fees = -((fix_params[fix_params.contrato == valor8].non_fin_fees.values[0]))
+    non_fin_fees = -((fix_params[fix_params.contrato == valor8]['Comisiones no financieras'].values[0]))
     NII = TII + TIE
     GM = NII + non_fin_fees
-    op_exp = -((fix_params[fix_params.contrato == valor8].op_exp.values[0]))
+    op_exp = -((fix_params[fix_params.contrato == valor8]['Gastos de explotacion'].values[0]))
     NOI = GM + op_exp
-    EL = (fix_params[fix_params.contrato == valor8].EL.values[0]*-1)
+    EL = (fix_params[fix_params.contrato == valor8]['Perdida esperada'].values[0]*-1)
     PBT = NOI + EL
     PAT = 0.715*PBT
     RWA = fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1
@@ -456,12 +458,12 @@ def table(valor1, valor2, valor3, valor5, valor6, valor7, valor8):
     p_and_l = np.round(pd.DataFrame({'Inputs':['TIN', 'Financial fees', 'Total Interest Income', 'Total Interest Expenses', 'Net Interest Income', 'Non Fiancial Fees', 'Gross Margin', 'Operating Expenses ', 'Net Operating Income', 'EL', 'PBT', 'PAT', 'RWA', 'RORWA'], 'Valores':[valor2, fin_fees, TII, TIE, NII, non_fin_fees, GM, op_exp, NOI, EL, PBT, PAT, RWA, RORWA]}), 2)
     p_and_l['Valores'] = [f"{np.round(valor*100, 2)}%" if i != p_and_l.shape[0]-2 else valor for i, valor in enumerate(p_and_l['Valores'])]
 
-    by_monto = [getIndicators(i, valor2, valor3, valor4, valor5, valor6, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1).RORWA.values[0] for i in np.arange(100, 50000, 10000)]
-    by_TIN = [getIndicators(valor1, i, valor3, valor4, valor5, valor6, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1).RORWA.values[0] for i in np.arange(-1.1, 1.1, 0.01)]
-    by_pagos = [getIndicators(valor1, valor2, i, valor4, valor5, valor6, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1).RORWA.values[0] for i in range(valor4+1, 70)]
-    by_fapertura = [getIndicators(valor1, valor2, valor3, valor4, valor5, valor6, i, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1).RORWA.values[0] for i in np.arange(0, 20000, 2000)]
-    by_fterceros = [getIndicators(valor1, valor2, valor3, valor4, i, valor6, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1).RORWA.values[0] for i in np.arange(0, 20000, 2000)]
-    by_frappels = [getIndicators(valor1, valor2, valor3, valor4, valor5, i, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8].non_fin_fees.values[0], fix_params[fix_params.contrato == valor8].op_exp.values[0], fix_params[fix_params.contrato == valor8].EL.values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1).RORWA.values[0] for i in np.arange(0, 20000, 2000)]
+    by_monto = [getIndicators(i, valor2, valor3, valor4, valor5, valor6, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8]['Comisiones no financieras'].values[0], fix_params[fix_params.contrato == valor8]['Gastos de explotacion'].values[0], fix_params[fix_params.contrato == valor8]['Perdida esperada'].values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1).RORWA.values[0] for i in np.arange(100, 50000, 10000)]
+    by_TIN = [getIndicators(valor1, i, valor3, valor4, valor5, valor6, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8]['Comisiones no financieras'].values[0], fix_params[fix_params.contrato == valor8]['Gastos de explotacion'].values[0], fix_params[fix_params.contrato == valor8]['Perdida esperada'].values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1).RORWA.values[0] for i in np.arange(-1.1, 1.1, 0.01)]
+    by_pagos = [getIndicators(valor1, valor2, i, valor4, valor5, valor6, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8]['Comisiones no financieras'].values[0], fix_params[fix_params.contrato == valor8]['Gastos de explotacion'].values[0], fix_params[fix_params.contrato == valor8]['Perdida esperada'].values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1).RORWA.values[0] for i in range(valor4+1, 70)]
+    by_fapertura = [getIndicators(valor1, valor2, valor3, valor4, valor5, valor6, i, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8]['Comisiones no financieras'].values[0], fix_params[fix_params.contrato == valor8]['Gastos de explotacion'].values[0], fix_params[fix_params.contrato == valor8]['Perdida esperada'].values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1).RORWA.values[0] for i in np.arange(0, 20000, 2000)]
+    by_fterceros = [getIndicators(valor1, valor2, valor3, valor4, i, valor6, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8]['Comisiones no financieras'].values[0], fix_params[fix_params.contrato == valor8]['Gastos de explotacion'].values[0], fix_params[fix_params.contrato == valor8]['Perdida esperada'].values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1).RORWA.values[0] for i in np.arange(0, 20000, 2000)]
+    by_frappels = [getIndicators(valor1, valor2, valor3, valor4, valor5, i, valor7, fix_params[fix_params.contrato == valor8].ITR.values[0], fix_params[fix_params.contrato == valor8]['Comisiones no financieras'].values[0], fix_params[fix_params.contrato == valor8]['Gastos de explotacion'].values[0], fix_params[fix_params.contrato == valor8]['Perdida esperada'].values[0], fix_params[fix_params.contrato == valor8].RWA.values[0]*valor1).RORWA.values[0] for i in np.arange(0, 20000, 2000)]
 
     
     TIN_df = pd.DataFrame({'TIN':np.arange(-1.1, 1.1, 0.01), 'RORWA':by_TIN})
