@@ -1,5 +1,5 @@
-,contrato,ITR,non_fin_fees,op_exp,EL,RWA,RORWA objetivo,Cancelacion
-0,auto_nuevo,0.02,0.01,0.0013,0.003,0.37,0.02.0,8
-1,auto_usado,0.01,0.01,0.0085,0.01,0.4,0.015,10
-2,consumo,0.03,-0.002,0.02,0.014,0.57,0.0175,3
-3,directo,0.04,0.01,0.02,0.04,0.41,0.03,20
+contrato,ITR,Comisiones no financieras,Gastos de explotacion,Perdida esperada,RWA,RORWA objetivo,plazo cancelado
+auto_nuevo,0.02,0.01,0.0013,0.003,0.37,0.020,8
+auto_usado,0.01,0.01,0.0085,0.01,0.4,0.015,10
+consumo,0.03,-0.002,0.02,0.014,0.57,0.0175,3
+directo,0.04,0.01,0.02,0.04,0.41,0.03,20
